@@ -30,6 +30,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
 
 import com.flowpowered.network.Codec;
+import com.flowpowered.network.CodecContext;
 import com.flowpowered.network.Message;
 import com.flowpowered.network.exception.UnknownPacketException;
 import com.flowpowered.network.protocol.Protocol;
@@ -39,6 +40,7 @@ import com.flowpowered.network.protocol.Protocol;
  */
 public class MessageDecoder extends ReplayingDecoder<ByteBuf> {
     private final MessageHandler messageHandler;
+    private CodecContext context;
 
     public MessageDecoder(final MessageHandler handler) {
         this.messageHandler = handler;
@@ -46,6 +48,9 @@ public class MessageDecoder extends ReplayingDecoder<ByteBuf> {
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf buf, List<Object> out) throws Exception {
+    	if (context == null && messageHandler.getSession() != null) {
+            context = new CodecContext(messageHandler.getSession());
+        }
         Protocol protocol = messageHandler.getSession().getProtocol();
         Codec<?> codec = null;
         try {
@@ -62,7 +67,7 @@ public class MessageDecoder extends ReplayingDecoder<ByteBuf> {
         if (codec == null) {
             throw new UnsupportedOperationException("Protocol#readHeader cannot return null!");
         }
-        Message decoded = codec.decode(buf);
+        Message decoded = codec.decode(context, buf);
         out.add(decoded);
     }
 }
